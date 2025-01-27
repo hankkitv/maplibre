@@ -7,6 +7,11 @@
     <title>Map with Thousands of POIs</title>
     <script src="https://unpkg.com/maplibre-gl/dist/maplibre-gl.js"></script>
     <link href="https://unpkg.com/maplibre-gl/dist/maplibre-gl.css" rel="stylesheet">
+
+    <!-- Load jQuery and PapaParse to read data from a CSV file -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
+
     <style>
         body {
             margin: 0;
@@ -25,32 +30,69 @@
 <body>
     <div id="map"></div>
     <script>
+        // Define the map syle (OpenStreetMap raster tiles)
+        const style = {
+            "version": 8,
+            "sources": {
+                "osm": {
+                    "type": "raster",
+                    "tiles": ["https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"],
+                    "tileSize": 256,
+                    "attribution": "&copy; OpenStreetMap Contributors",
+                    "maxzoom": 19
+                }
+            },
+            "layers": [
+                {
+                    "id": "osm",
+                    "type": "raster",
+                    "source": "osm" // This must match the source key above
+                }
+            ]
+        };
+
         // Initialize the map
         const map = new maplibregl.Map({
             container: 'map', // ID of the container element
-            style: 'https://demotiles.maplibre.org/style.json', // Using a free MapLibre style
-            center: [0, 0], // Initial map center [longitude, latitude]
-            zoom: 2, // Initial zoom level
+            style: style,
+            center: [126.9800428, 37.5638288], // Initial map center [longitude, latitude]
+            zoom: 13, // Initial zoom level
         });
 
-        // Generate example POI data (this would come from a server in a real app)
+        let html_tpl = '<iframe src="https://www.youtube.com/embed/[vid]" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>';
+
         const pois = [];
-        for (let i = 0; i < 10000; i++) {
-            pois.push({
-                type: 'Feature',
-                geometry: {
-                    type: 'Point',
-                    coordinates: [
-                        Math.random() * 360 - 180, // Random longitude
-                        Math.random() * 180 - 90, // Random latitude
-                    ]
-                },
-                properties: {
-                    id: i,
-                    name: `POI ${i}`
-                }
-            });
-        }
+        // Read markers data from data.csv
+        $.get('https://raw.githubusercontent.com/hankkitv/youtube/refs/heads/main/poi.csv', function (csvString) {
+
+            // Use PapaParse to convert string to array of objects
+            var data = Papa.parse(csvString, { header: true, dynamicTyping: true }).data;
+
+            // For each row in data, create a marker and add it to the map
+            // For each row, columns `Latitude`, `Longitude`, and `Title` are required
+            for (var i in data) {
+                var row = data[i];
+
+                pois.push({
+                    type: 'Feature',
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [
+                            row.lon, // Random longitude
+                            row.lat, // Random latitude
+                        ]
+                    },
+                    properties: {
+                        id: i,
+                        name: row.name,
+                        addr: row.addr,
+                        tel: row.tel,
+                        youtube: row.media
+                    }
+                });
+            }
+        });
+
 
         // Add the POIs to the map as a source
         map.on('load', async () => {
@@ -65,107 +107,107 @@
 
             // });
 
-                map.addSource('pois', {
-                    type: 'geojson',
-                    data: {
-                        type: 'FeatureCollection',
-                        features: pois
-                    },
-                    // cluster: true, // Enable clustering
-                    // clusterMaxZoom: 14, // Max zoom to cluster the points
-                    // clusterRadius: 50 // Distance in pixels for clustering
-                });
+            map.addSource('pois', {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features: pois
+                },
+                // cluster: true, // Enable clustering
+                // clusterMaxZoom: 14, // Max zoom to cluster the points
+                // clusterRadius: 50 // Distance in pixels for clustering
+            });
 
-                // // Add a layer for the clusters
-                // map.addLayer({
-                //     id: 'clusters',
-                //     type: 'circle',
-                //     source: 'pois',
-                //     filter: ['has', 'point_count'],
-                //     paint: {
-                //         'circle-color': '#51bbd6',
-                //         'circle-radius': [
-                //             'step',
-                //             ['get', 'point_count'],
-                //             20,
-                //             100,
-                //             30,
-                //             750,
-                //             40
-                //         ]
-                //     }
-                // });
+            // // Add a layer for the clusters
+            // map.addLayer({
+            //     id: 'clusters',
+            //     type: 'circle',
+            //     source: 'pois',
+            //     filter: ['has', 'point_count'],
+            //     paint: {
+            //         'circle-color': '#51bbd6',
+            //         'circle-radius': [
+            //             'step',
+            //             ['get', 'point_count'],
+            //             20,
+            //             100,
+            //             30,
+            //             750,
+            //             40
+            //         ]
+            //     }
+            // });
 
-                // // Add a layer for the cluster labels (the point count)
-                // map.addLayer({
-                //     id: 'cluster-count',
-                //     type: 'symbol',
-                //     source: 'pois',
-                //     filter: ['has', 'point_count'],
-                //     layout: {
-                //         'text-field': '{point_count_abbreviated}',
-                //         'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-                //         'text-size': 12
-                //     },
-                //     paint: {
-                //         'text-color': '#ffffff'
-                //     }
-                // });
+            // // Add a layer for the cluster labels (the point count)
+            // map.addLayer({
+            //     id: 'cluster-count',
+            //     type: 'symbol',
+            //     source: 'pois',
+            //     filter: ['has', 'point_count'],
+            //     layout: {
+            //         'text-field': '{point_count_abbreviated}',
+            //         'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+            //         'text-size': 12
+            //     },
+            //     paint: {
+            //         'text-color': '#ffffff'
+            //     }
+            // });
 
-                // Add a layer for the individual POI markers (unclustered)
-                map.addLayer({
-                    id: 'unclustered-points',
-                    type: 'symbol',
-                    source: 'pois',                    
-                    layout: {
-                        'icon-image': 'custom-poi-icon', // Use the custom icon added above
-                        'icon-size': .5, // Adjust the icon size
-                        'text-field': '{name}', // Display the name of the POI
-                        'text-size': 12, // Set text size for POI names
-                        'text-anchor': 'top',
-                        'text-offset': [0, 0.5]
-                    }
-                });
+            // Add a layer for the individual POI markers (unclustered)
+            map.addLayer({
+                id: 'unclustered-points',
+                type: 'symbol',
+                source: 'pois',
+                layout: {
+                    'icon-image': 'custom-poi-icon', // Use the custom icon added above
+                    'icon-size': .5, // Adjust the icon size
+                    'text-field': '{name}', // Display the name of the POI
+                    'text-size': 12, // Set text size for POI names
+                    'text-anchor': 'top',
+                    'text-offset': [0, 0.5]
+                }
+            });
 
-                // Add click event listener for individual POIs
-                map.on('click', 'unclustered-points', function (e) {
-                    const coordinates = e.features[0].geometry.coordinates;
-                    const description = e.features[0].properties.name;
+            // Add click event listener for individual POIs
+            map.on('click', 'unclustered-points', function (e) {
+                const coordinates = e.features[0].geometry.coordinates;
+                const description = '<p>' + e.features[0].properties.name + '<br />' + e.features[0].properties.addr + '<br />' + e.features[0].properties.tel + '</p>' + html_tpl.replace(/\[vid\]/g, e.features[0].properties.media);
 
-                    // Display a popup with the POI name
-                    new maplibregl.Popup()
-                        .setLngLat(coordinates)
-                        .setHTML(description)
-                        .addTo(map);
-                });
+                // Display a popup with the POI name
+                new maplibregl.Popup()
+                    .setLngLat(coordinates)
+                    .setHTML(description)
+                    .addTo(map);
+            });
 
-                // // Add click event listener for clusters
-                // map.on('click', 'clusters', function (e) {
-                //     const features = map.queryRenderedFeatures(e.point, {
-                //         layers: ['clusters']
-                //     });
-                //     const clusterId = features[0].properties.cluster_id;
+            // // Add click event listener for clusters
+            // map.on('click', 'clusters', function (e) {
+            //     const features = map.queryRenderedFeatures(e.point, {
+            //         layers: ['clusters']
+            //     });
+            //     const clusterId = features[0].properties.cluster_id;
 
-                //     // Get the list of all POIs in this cluster
-                //     map.getSource('pois').getClusterExpansionZoom(clusterId, function (err, zoom) {
-                //         if (err) return;
+            //     // Get the list of all POIs in this cluster
+            //     map.getSource('pois').getClusterExpansionZoom(clusterId, function (err, zoom) {
+            //         if (err) return;
 
-                //         // Zoom in on the cluster
-                //         map.easeTo({
-                //             center: features[0].geometry.coordinates,
-                //             zoom: zoom
-                //         });
-                //     });
-                // });
+            //         // Zoom in on the cluster
+            //         map.easeTo({
+            //             center: features[0].geometry.coordinates,
+            //             zoom: zoom
+            //         });
+            //     });
+            // });
 
-                // Change the cursor to a pointer when hovering over the POIs
-                map.on('mouseenter', 'unclustered-points', function () {
-                    map.getCanvas().style.cursor = 'pointer';
-                });
-                map.on('mouseleave', 'unclustered-points', function () {
-                    map.getCanvas().style.cursor = '';
-                });
-            
+            // Change the cursor to a pointer when hovering over the POIs
+            map.on('mouseenter', 'unclustered-points', function () {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+            map.on('mouseleave', 'unclustered-points', function () {
+                map.getCanvas().style.cursor = '';
+            });
+
         });
     </script>
 </body>
