@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map with Thousands of POIs</title>
+  <script src="https://unpkg.com/maplibre-gl@2.10.0/dist/maplibre-gl.js"></script>
+  <link href="https://unpkg.com/maplibre-gl@2.10.0/dist/maplibre-gl.css" rel="stylesheet">
+  <style>
+    body { margin: 0; height: 100%; }
+    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    // Initialize the map
+    const map = new maplibre.GLMap({
+      container: 'map', // ID of the container element
+      style: 'https://demotiles.maplibre.org/style.json', // Using a free MapLibre style
+      center: [0, 0], // Initial map center [longitude, latitude]
+      zoom: 2, // Initial zoom level
+    });
+
+    // Generate example POI data (this would come from a server in a real app)
+    const pois = [];
+    for (let i = 0; i < 10000; i++) {
+      pois.push({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [
+            Math.random() * 360 - 180, // Random longitude
+            Math.random() * 180 - 90, // Random latitude
+          ]
+        },
+        properties: {
+          id: i,
+          name: `POI ${i}`
+        }
+      });
+    }
+
+    // Add the POIs to the map as a source
+    map.on('load', function() {
+      map.addSource('pois', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: pois
+        },
+        cluster: true, // Enable clustering
+        clusterMaxZoom: 14, // Max zoom to cluster the points
+        clusterRadius: 50 // Distance in pixels for clustering
+      });
+
+      // Add a layer for the clusters
+      map.addLayer({
+        id: 'clusters',
+        type: 'circle',
+        source: 'pois',
+        filter: ['has', 'point_count'],
+        paint: {
+          'circle-color': '#51bbd6',
+          'circle-radius': [
+            'step',
+            ['get', 'point_count'],
+            20,
+            100,
+            30,
+            750,
+            40
+          ]
+        }
+      });
+
+      // Add a layer for the cluster labels (the point count)
+      map.addLayer({
+        id: 'cluster-count',
+        type: 'symbol',
+        source: 'pois',
+        filter: ['has', 'point_count'],
+        layout: {
+          'text-field': '{point_count_abbreviated}',
+          'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+          'text-size': 12
+        },
+        paint: {
+          'text-color': '#ffffff'
+        }
+      });
+
+      // Add a layer for the individual POI markers (unclustered)
+      map.addLayer({
+        id: 'unclustered-points',
+        type: 'circle',
+        source: 'pois',
+        filter: ['!', ['has', 'point_count']],
+        paint: {
+          'circle-color': '#ff5733',
+          'circle-radius': 5
+        }
+      });
+
+      // Add click event listener for individual POIs
+      map.on('click', 'unclustered-points', function(e) {
+        const coordinates = e.features[0].geometry.coordinates;
+        const description = e.features[0].properties.name;
+        
+        // Display a popup with the POI name
+        new maplibre.Popup()
+          .setLngLat(coordinates)
+          .setHTML(description)
+          .addTo(map);
+      });
+
+      // Add click event listener for clusters
+      map.on('click', 'clusters', function(e) {
+        const features = map.queryRenderedFeatures(e.point, {
+          layers: ['clusters']
+        });
+        const clusterId = features[0].properties.cluster_id;
+
+        // Get the list of all POIs in this cluster
+        map.getSource('pois').getClusterExpansionZoom(clusterId, function(err, zoom) {
+          if (err) return;
+
+          // Zoom in on the cluster
+          map.easeTo({
+            center: features[0].geometry.coordinates,
+            zoom: zoom
+          });
+        });
+      });
+
+      // Change the cursor to a pointer when hovering over the POIs
+      map.on('mouseenter', 'unclustered-points', function() {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+      map.on('mouseleave', 'unclustered-points', function() {
+        map.getCanvas().style.cursor = '';
+      });
+    });
+  </script>
+</body>
+</html>
