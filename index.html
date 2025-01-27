@@ -55,7 +55,7 @@
         // Add the POIs to the map as a source
         map.on('load', async () => {
             // Add a custom icon to the map (You can use your own image URL)
-            image = await map.loadImage('http://hankkitv.github.io/maplibre/restaurant-pin.png');
+            image = await map.loadImage('./restaurant-pin.png');
             map.addImage('custom-poi-icon', image.data);
 
             // map.loadImage('http://hankkitv.github.io/maplibre/restaurant-pin.png', (error, image) => {
