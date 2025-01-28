@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Map with Thousands of POIs</title>
+    <title>Map of HankkiTV</title>
     <script src="https://unpkg.com/maplibre-gl/dist/maplibre-gl.js"></script>
     <link href="https://unpkg.com/maplibre-gl/dist/maplibre-gl.css" rel="stylesheet">
 
@@ -23,6 +23,15 @@
             top: 0;
             bottom: 0;
             width: 100%;
+        }
+
+        .custom-popup {
+            background-color: #ffffff;
+            color: rgb(70, 70, 70);
+            font-family: Arial, sans-serif;
+            padding: 15px;
+            border-radius: 5px;
+            width: fit-content;
         }
     </style>
 </head>
@@ -88,7 +97,7 @@
                         name: row.name,
                         addr: row.addr,
                         tel: row.tel,
-                        youtube: row.media
+                        media: row.media
                     }
                 });
             }
@@ -98,8 +107,8 @@
         // Add the POIs to the map as a source
         map.on('load', async () => {
             // Add a custom icon to the map (You can use your own image URL)
-            image = await map.loadImage('./restaurant-pin.png');
-            map.addImage('custom-poi-icon', image.data);
+            // image = await map.loadImage('./restaurant-pin.png');
+            // map.addImage('custom-poi-icon', image.data);
 
             // map.loadImage('http://hankkitv.github.io/maplibre/restaurant-pin.png', (error, image) => {
             //     if (error) throw error;
@@ -155,13 +164,26 @@
             //     }
             // });
 
+            // Step 1: Rounded rectangle background (Polygon layer)
+            map.addLayer({
+                id: 'rounded-rectangle-background',
+                type: 'fill',
+                source: 'pois',
+                layout: {},
+                paint: {
+                    'fill-color': '#ff6347', // Background color of the rectangle
+                    'fill-outline-color': '#ff0000', // Outline color (optional)
+                    'fill-opacity': 0.6 // Transparency of the background
+                }
+            });
+
             // Add a layer for the individual POI markers (unclustered)
             map.addLayer({
                 id: 'unclustered-points',
                 type: 'symbol',
                 source: 'pois',
                 layout: {
-                    'icon-image': 'custom-poi-icon', // Use the custom icon added above
+                    // 'icon-image': 'custom-poi-icon', // Use the custom icon added above
                     'icon-size': .5, // Adjust the icon size
                     "text-font": ["Open Sans Bold"],
                     'text-field': '{name}', // Display the name of the POI
@@ -174,7 +196,7 @@
             // Add click event listener for individual POIs
             map.on('click', 'unclustered-points', function (e) {
                 const coordinates = e.features[0].geometry.coordinates;
-                const description = '<p>' + e.features[0].properties.name + '<br />' + e.features[0].properties.addr + '<br />' + e.features[0].properties.tel + '</p>' + html_tpl.replace(/\[vid\]/g, e.features[0].properties.media);
+                const description = '<div class="custom-popup"><p>' + e.features[0].properties.name + '<br />' + e.features[0].properties.addr + '<br />' + e.features[0].properties.tel + '<br /></p>' + html_tpl.replace(/\[vid\]/g, e.features[0].properties.media) + '</div>';
 
                 // Display a popup with the POI name
                 new maplibregl.Popup()
