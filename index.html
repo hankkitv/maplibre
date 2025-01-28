@@ -204,7 +204,8 @@
                     "text-halo-color": "#fff",
                     "text-halo-width": 5
                 },
-                filter: ['==', '$type', 'Point'] // Make sure to display for point features only
+                filter: ['!', ['has', 'point_count']]  // Only for non-clustered points 
+                // filter: ['==', '$type', 'Point'] // Make sure to display for point features only
             });
 
             // Add click event listener for individual POIs
