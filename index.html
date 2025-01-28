@@ -123,46 +123,54 @@
                     type: 'FeatureCollection',
                     features: pois
                 },
-                // cluster: true, // Enable clustering
-                // clusterMaxZoom: 14, // Max zoom to cluster the points
-                // clusterRadius: 50 // Distance in pixels for clustering
+                cluster: true, // Enable clustering
+                clusterMaxZoom: 14, // Max zoom to cluster the points
+                clusterRadius: 50 // Distance in pixels for clustering
             });
 
-            // // Add a layer for the clusters
-            // map.addLayer({
-            //     id: 'clusters',
-            //     type: 'circle',
-            //     source: 'pois',
-            //     filter: ['has', 'point_count'],
-            //     paint: {
-            //         'circle-color': '#51bbd6',
-            //         'circle-radius': [
-            //             'step',
-            //             ['get', 'point_count'],
-            //             20,
-            //             100,
-            //             30,
-            //             750,
-            //             40
-            //         ]
-            //     }
-            // });
+            // Add a layer for the clusters
+            map.addLayer({
+                id: 'clusters',
+                type: 'circle',
+                source: 'pois',
+                filter: ['has', 'point_count'],
+                paint: {
+                    'circle-color': [
+                        'step',
+                        ['get', 'point_count'],
+                        '#51bbd6',
+                        30,
+                        '#f1f075',
+                        100,
+                        '#f28cb1'
+                    ],
+                    'circle-radius': [
+                        'step',
+                        ['get', 'point_count'],
+                        20,
+                        100,
+                        30,
+                        750,
+                        40
+                    ]
+                }
+            });
 
-            // // Add a layer for the cluster labels (the point count)
-            // map.addLayer({
-            //     id: 'cluster-count',
-            //     type: 'symbol',
-            //     source: 'pois',
-            //     filter: ['has', 'point_count'],
-            //     layout: {
-            //         'text-field': '{point_count_abbreviated}',
-            //         'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-            //         'text-size': 12
-            //     },
-            //     paint: {
-            //         'text-color': '#ffffff'
-            //     }
-            // });
+            // Add a layer for the cluster labels (the point count)
+            map.addLayer({
+                id: 'cluster-count',
+                type: 'symbol',
+                source: 'pois',
+                filter: ['has', 'point_count'],
+                layout: {
+                    'text-field': '{point_count_abbreviated}',
+                    "text-font": ["Open Sans Bold"],
+                    'text-size': 12
+                },
+                paint: {
+                    'text-color': '#ffffff'
+                }
+            });
 
             // Step 1: Rounded rectangle background (Polygon layer)
             map.addLayer({
@@ -187,10 +195,15 @@
                     'icon-size': .5, // Adjust the icon size
                     "text-font": ["Open Sans Bold"],
                     'text-field': '{name}', // Display the name of the POI
-                    'text-size': 12, // Set text size for POI names
+                    'text-size': 14, // Set text size for POI names
                     'text-anchor': 'top',
                     'text-offset': [0, 0.5]
-                }
+                },
+                "paint": {
+                    "text-color": "#202",
+                    "text-halo-color": "#fff",
+                    "text-halo-width": 5
+                },
             });
 
             // Add click event listener for individual POIs
@@ -205,24 +218,30 @@
                     .addTo(map);
             });
 
-            // // Add click event listener for clusters
-            // map.on('click', 'clusters', function (e) {
-            //     const features = map.queryRenderedFeatures(e.point, {
-            //         layers: ['clusters']
-            //     });
-            //     const clusterId = features[0].properties.cluster_id;
+            // Add click event listener for clusters
+            map.on('click', 'clusters', async (e) => {
+                const features = map.queryRenderedFeatures(e.point, {
+                    layers: ['clusters']
+                });
+                const clusterId = features[0].properties.cluster_id;
 
-            //     // Get the list of all POIs in this cluster
-            //     map.getSource('pois').getClusterExpansionZoom(clusterId, function (err, zoom) {
-            //         if (err) return;
+                // Get the list of all POIs in this cluster
+                const zoom = await map.getSource('pois').getClusterExpansionZoom(clusterId);
+                map.easeTo({
+                    center: features[0].geometry.coordinates,
+                    zoom
+                });
 
-            //         // Zoom in on the cluster
-            //         map.easeTo({
-            //             center: features[0].geometry.coordinates,
-            //             zoom: zoom
-            //         });
-            //     });
-            // });
+                // map.getSource('pois').getClusterExpansionZoom(clusterId, function (err, zoom) {
+                //     if (err) return;
+
+                //     // Zoom in on the cluster
+                //     map.easeTo({
+                //         center: features[0].geometry.coordinates,
+                //         zoom
+                //     });
+                // });
+            });
 
             // Change the cursor to a pointer when hovering over the POIs
             map.on('mouseenter', 'unclustered-points', function () {
