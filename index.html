@@ -33,12 +33,42 @@
             border-radius: 5px;
             width: fit-content;
         }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            /* Light background color */
+            border-top: 5px solid #3498db;
+            /* Spinner color */
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
 
 <body>
+    <div id="loading" class="loading">Loading...</div>
     <div id="map"></div>
     <script>
+        // Show loading animation until map is loaded
+        var loadingElement = document.getElementById('loading');
+        loadingElement.style.display = 'block';  // Show loading animation
+
         // Define the map syle (OpenStreetMap raster tiles)
         const style = {
             "version": 8,
@@ -69,12 +99,25 @@
             zoom: 13, // Initial zoom level
         });
 
+        // Function to load and parse the CSV data asynchronously
+        async function loadCSV(url) {
+            try {
+                const response = await fetch(url);  // Fetch CSV file
+                const text = await response.text();  // Get text content of CSV
+                return text;  
+            } catch (error) {
+                console.error('Error loading CSV:', error);
+            }
+        }
+
         let html_tpl = '<iframe src="https://www.youtube.com/embed/[vid]" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>';
 
         const pois = [];
-        // Read markers data from data.csv
-        $.get('https://raw.githubusercontent.com/hankkitv/youtube/refs/heads/main/poi.csv', function (csvString) {
 
+        // Read markers data from data.csv
+        async function addPOIsToMap() {
+            const csvString = await loadCSV('https://raw.githubusercontent.com/hankkitv/youtube/refs/heads/main/poi.csv');  
+       
             // Use PapaParse to convert string to array of objects
             var data = Papa.parse(csvString, { header: true, dynamicTyping: true }).data;
 
@@ -101,7 +144,7 @@
                     }
                 });
             }
-        });
+        };
 
 
         // Add the POIs to the map as a source
@@ -109,6 +152,8 @@
             // Add a custom icon to the map (You can use your own image URL)
             image = await map.loadImage('https://raw.githubusercontent.com/hankkitv/maplibre/refs/heads/main/poi_s.png');
             map.addImage('custom-poi-icon', image.data);
+
+            await addPOIsToMap();  // Call function to add POIs
 
             // map.loadImage('http://hankkitv.github.io/maplibre/restaurant-pin.png', (error, image) => {
             //     if (error) throw error;
@@ -252,6 +297,8 @@
             map.on('mouseleave', 'unclustered-points', function () {
                 map.getCanvas().style.cursor = '';
             });
+
+            loadingElement.style.display = 'none';  // Hide loading animation
 
         });
     </script>
