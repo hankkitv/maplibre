@@ -129,7 +129,7 @@
 
         // Function to update the progress bar and percentage
         async function updateProgressBar(current, total) {
-            const percentage = Math.round((current / total) * 100);
+            const percentage = Math.round((current * 100 / total));
             const progress = document.getElementById('progress');
             const percentageText = document.getElementById('percentage');
             progress.style.width = percentage + '%';
